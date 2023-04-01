@@ -5,11 +5,11 @@ int main(){
     char fileName[MAX_NAME_LEN];
     Print("Input file's name: ");
     Read(fileName, MAX_NAME_LEN, 0);
-    if (Create(fileName) != -1){
-        Print("Create file OK\n");
+    if (Remove(fileName) != -1){
+        Print("File is deleted\n");
     }
     else{
-        Print("Create file FAIL\n");
+        Print("Delete FAIL\n");
     }
     Halt();
 }

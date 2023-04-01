@@ -151,7 +151,9 @@ void ReadHandle(){
     DEBUG(dbgFile,
           "Read " << charCount << " chars from file " << fileId << "\n");
 
-    kernel->machine->WriteRegister(2, SysRead(buffer, charCount, fileId));
+	int readSize = SysRead(buffer, charCount, fileId);
+	// printf("Read Size: %d", readSize);
+    kernel->machine->WriteRegister(2, readSize);
     System2User(buffer, virtAddr, charCount);
 
     delete[] buffer;
