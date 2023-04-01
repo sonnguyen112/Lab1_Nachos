@@ -36,16 +36,107 @@
 #include "copyright.h"
 #include "sysdep.h"
 #include "openfile.h"
+#include "network.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #ifdef FILESYS_STUB // Temporarily implement file system calls as
 // calls to UNIX, until the real file system
 // implementation is available
-#define FILE_MAX 10
+#define FILE_MAX 20
 #define CONSOLE_IN 0
 #define CONSOLE_OUT 1
 #define MODE_READWRITE 0
 #define MODE_READ 1
 #define MODE_WRITE 2
+
+class SocketFileTable
+{
+private:
+	int *socketFD;
+
+public:
+	SocketFileTable()
+	{
+		socketFD = new int[FILE_MAX];
+		for (int i = 0; i < FILE_MAX; i++)
+		{
+			socketFD[i] = -1;
+		}
+	}
+	~SocketFileTable()
+	{
+		delete socketFD;
+	}
+	int Insert()
+	{
+		int freeIndex = -1;
+		for (int i = 0; i < FILE_MAX; i++)
+		{
+			if (socketFD[i] == -1)
+			{
+				freeIndex = i;
+				break;
+			}
+		}
+		if (freeIndex == -1)
+		{
+			return -1;
+		}
+		int sock = socket(AF_INET, SOCK_STREAM, 0);
+		if (sock < 0)
+		{
+			return -1;
+		}
+		socketFD[freeIndex] = sock;
+		return freeIndex;
+	}
+
+	int Connect(int index, char *ip, int port)
+	{
+		struct sockaddr_in serv_addr;
+		memset(&serv_addr, '0', sizeof(serv_addr));
+		serv_addr.sin_family = AF_INET;
+		serv_addr.sin_port = htons(port);
+		// Convert IPv4 and IPv6 addresses from text to binary form
+		if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
+		{
+			printf("\nInvalid address/ Address not supported \n");
+			return -1;
+		}
+		if (connect(socketFD[index], (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+		{
+			printf("\nConnection Failed \n");
+			return -1;
+		}
+		return 0;
+	}
+
+	int Send(int index, char *buffer, int len){
+		int valSend = send(socketFD[index], buffer, strlen(buffer), 0);
+    	return valSend;
+	}
+
+	int Receive(int index, char *buffer, int len){
+		int valread = read(socketFD[index], buffer, len);
+    	return valread;
+	}
+
+	int Remove(int index){
+		if (index < 0 || index >= FILE_MAX)
+			return -1;
+		if (socketFD[index] != -1)
+		{
+			socketFD[index] = -1;
+			return 0;
+		}
+		return -1;
+	}
+};
 
 class FileTable
 {
@@ -155,11 +246,16 @@ class FileSystem
 {
 public:
 	FileTable *fileTable;
-	FileSystem() {
-		fileTable = new FileTable; 
+	SocketFileTable *socketFileTable;
+	FileSystem()
+	{
+		fileTable = new FileTable;
+		socketFileTable = new SocketFileTable;
 	}
-	~FileSystem(){
+	~FileSystem()
+	{
 		delete fileTable;
+		delete socketFileTable;
 	}
 
 	bool Create(char *name)
@@ -181,24 +277,49 @@ public:
 		return new OpenFile(fileDescriptor);
 	}
 
-	int OpenFileId(char *name, int openMode) {
-        return fileTable->Insert(name, openMode);
-    }
+	int OpenFileId(char *name, int openMode)
+	{
+		return fileTable->Insert(name, openMode);
+	}
 
 	int Close(int id) { return fileTable->Remove(id); }
 
-	int Read(char *buffer, int charCount, int id) {
-        return fileTable->Read(buffer, charCount, id);
-    }
+	int Read(char *buffer, int charCount, int id)
+	{
+		return fileTable->Read(buffer, charCount, id);
+	}
 
-	int Write(char *buffer, int charCount, int id) {
-        return fileTable->Write(buffer, charCount, id);
-    }
+	int Write(char *buffer, int charCount, int id)
+	{
+		return fileTable->Write(buffer, charCount, id);
+	}
 
-	int Seek(int position, int id) {
-        return fileTable->Seek(position, id);
-    }
+	int Seek(int position, int id)
+	{
+		return fileTable->Seek(position, id);
+	}
 
+	int SocketTCP()
+	{
+		return socketFileTable->Insert();
+	}
+
+	int SocketConnect(int socketid, char *ip, int port)
+	{
+		return socketFileTable->Connect(socketid, ip, port);
+	}
+
+	int SocketSend(int socketid, char *buffer, int len){
+		return socketFileTable->Send(socketid, buffer, len);
+	}
+
+	int SocketReceive(int socketid, char *buffer, int len){
+		return socketFileTable->Receive(socketid, buffer, len);
+	}
+
+	int SocketClose(int socketid){
+		return socketFileTable->Remove(socketid);
+	}
 
 	bool Remove(char *name) { return Unlink(name) == 0; }
 };

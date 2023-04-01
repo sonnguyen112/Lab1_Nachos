@@ -35,6 +35,11 @@
 #define SC_ThreadExit   14
 #define SC_ThreadJoin   15
 #define SC_Print 16
+#define SC_SocketTCP    17
+#define SC_Connect  18
+#define SC_Send     19
+#define SC_Receive  20
+#define SC_SocketClose 21
 
 #define SC_Add		42
 
@@ -176,6 +181,16 @@ int ThreadJoin(ThreadId id);
  * Deletes current thread and returns ExitCode to every waiting lokal thread.
  */
 void ThreadExit(int ExitCode);	
+
+int SocketTCP();
+
+int Connect(int socketid, char *ip, int port);
+
+int Send(int socketid, char *buffer, int len);
+
+int Receive(int socketid, char *buffer, int len);
+
+int SocketClose(int socketid);
 
 #endif /* IN_ASM */
 

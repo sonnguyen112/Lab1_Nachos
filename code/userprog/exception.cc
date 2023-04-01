@@ -88,13 +88,15 @@ char *User2System(int addr, int convert_length = -1)
 	return str;
 }
 
-void System2User(char* str, int addr, int convert_length = -1) {
-    int length = (convert_length == -1 ? strlen(str) : convert_length);
-    for (int i = 0; i < length; i++) {
-        kernel->machine->WriteMem(addr + i, 1,
-                                  str[i]);  // copy characters to user space
-    }
-    kernel->machine->WriteMem(addr + length, 1, '\0');
+void System2User(char *str, int addr, int convert_length = -1)
+{
+	int length = (convert_length == -1 ? strlen(str) : convert_length);
+	for (int i = 0; i < length; i++)
+	{
+		kernel->machine->WriteMem(addr + i, 1,
+								  str[i]); // copy characters to user space
+	}
+	kernel->machine->WriteMem(addr + length, 1, '\0');
 }
 
 void CreateHandle()
@@ -113,33 +115,39 @@ void CreateHandle()
 	return moveProgramCounter();
 }
 
-void OpenHandle(){
+void OpenHandle()
+{
 	int virtAddr = kernel->machine->ReadRegister(4);
-    char* fileName = User2System(virtAddr);
-    int type = kernel->machine->ReadRegister(5);
+	char *fileName = User2System(virtAddr);
+	int type = kernel->machine->ReadRegister(5);
 	kernel->machine->WriteRegister(2, SysOpen(fileName, type));
 	delete fileName;
 	return moveProgramCounter();
 }
 
-void CloseHandle(){
+void CloseHandle()
+{
 	int id = kernel->machine->ReadRegister(4);
-    kernel->machine->WriteRegister(2, SysClose(id));
+	kernel->machine->WriteRegister(2, SysClose(id));
 	return moveProgramCounter();
 }
 
-void ReadHandle(){
+void ReadHandle()
+{
 	int virtAddr = kernel->machine->ReadRegister(4);
-    int charCount = kernel->machine->ReadRegister(5);
-    char* buffer = User2System(virtAddr, charCount);
-    int fileId = kernel->machine->ReadRegister(6);
+	int charCount = kernel->machine->ReadRegister(5);
+	char *buffer = User2System(virtAddr, charCount);
+	int fileId = kernel->machine->ReadRegister(6);
 
-	if (fileId == 0){
+	if (fileId == 0)
+	{
 		int i = 0;
-		while(true){
+		while (true)
+		{
 			char c = kernel->synchConsoleIn->GetChar();
 			kernel->machine->WriteMem(virtAddr + i, 1, c);
-			if (c == '\n'){
+			if (c == '\n')
+			{
 				break;
 			}
 			i++;
@@ -148,54 +156,99 @@ void ReadHandle(){
 		return moveProgramCounter();
 	}
 
-    DEBUG(dbgFile,
-          "Read " << charCount << " chars from file " << fileId << "\n");
+	DEBUG(dbgFile,
+		  "Read " << charCount << " chars from file " << fileId << "\n");
 
 	int readSize = SysRead(buffer, charCount, fileId);
 	// printf("Read Size: %d", readSize);
-    kernel->machine->WriteRegister(2, readSize);
-    System2User(buffer, virtAddr, charCount);
+	kernel->machine->WriteRegister(2, readSize);
+	System2User(buffer, virtAddr, charCount);
 
-    delete[] buffer;
+	delete[] buffer;
 	return moveProgramCounter();
 }
 
-void WriteHandle(){
+void WriteHandle()
+{
 	int virtAddr = kernel->machine->ReadRegister(4);
-    int charCount = kernel->machine->ReadRegister(5);
-    char* buffer = User2System(virtAddr, charCount);
-    int fileId = kernel->machine->ReadRegister(6);
+	int charCount = kernel->machine->ReadRegister(5);
+	char *buffer = User2System(virtAddr, charCount);
+	int fileId = kernel->machine->ReadRegister(6);
 
-    DEBUG(dbgFile,
-          "Write " << charCount << " chars to file " << fileId << "\n");
+	DEBUG(dbgFile,
+		  "Write " << charCount << " chars to file " << fileId << "\n");
 
-    kernel->machine->WriteRegister(2, SysWrite(buffer, charCount, fileId));
-    System2User(buffer, virtAddr, charCount);
+	kernel->machine->WriteRegister(2, SysWrite(buffer, charCount, fileId));
+	System2User(buffer, virtAddr, charCount);
 
-    delete[] buffer;
+	delete[] buffer;
 	return moveProgramCounter();
 }
 
-void SeekHandle(){
+void SeekHandle()
+{
 	int seekPos = kernel->machine->ReadRegister(4);
-    int fileId = kernel->machine->ReadRegister(5);
+	int fileId = kernel->machine->ReadRegister(5);
 
-    kernel->machine->WriteRegister(2, SysSeek(seekPos, fileId));
+	kernel->machine->WriteRegister(2, SysSeek(seekPos, fileId));
 
 	return moveProgramCounter();
 }
 
-void RemoveHandle(){
+void RemoveHandle()
+{
 	int virtAdd = kernel->machine->ReadRegister(4);
-	char* fileName = User2System(virtAdd);
+	char *fileName = User2System(virtAdd);
 	kernel->machine->WriteRegister(2, SysRemove(fileName));
 	return moveProgramCounter();
 }
 
-void PrintHandle(){
+void PrintHandle()
+{
 	int virtAdd = kernel->machine->ReadRegister(4);
-	char* buffer = User2System(virtAdd);
+	char *buffer = User2System(virtAdd);
 	SysWrite(buffer, strlen(buffer), 1);
+	return moveProgramCounter();
+}
+
+void SocketTCPHandle()
+{
+	kernel->machine->WriteRegister(2, SysSocketTCP());
+	return moveProgramCounter();
+}
+
+void ConnectHandle()
+{
+	int connect = SysConnect((int)kernel->machine->ReadRegister(4),
+							 User2System(kernel->machine->ReadRegister(5)),
+							 (int)kernel->machine->ReadRegister(6));
+	kernel->machine->WriteRegister(2, connect);
+	return moveProgramCounter();
+}
+
+void SendHandle()
+{
+	int valSent = SysSend((int)kernel->machine->ReadRegister(4),
+						  User2System(kernel->machine->ReadRegister(5)),
+						  (int)kernel->machine->ReadRegister(6));
+	kernel->machine->WriteRegister(2, valSent);
+	return moveProgramCounter();
+}
+
+void ReceiveHandle()
+{
+	int buffer = kernel->machine->ReadRegister(5);
+	char *buffer_char = User2System(kernel->machine->ReadRegister(5));
+	int valRead = SysReceive((int)kernel->machine->ReadRegister(4),
+							 buffer_char,
+							 (int)kernel->machine->ReadRegister(6));
+	System2User(buffer_char, buffer, valRead);
+	kernel->machine->WriteRegister(2, valRead);
+	return moveProgramCounter();
+}
+
+void SocketCloseHandle(){
+	kernel->machine->WriteRegister(2, SysSocketClose(kernel->machine->ReadRegister(4)));
 	return moveProgramCounter();
 }
 
@@ -252,6 +305,16 @@ void ExceptionHandler(ExceptionType which)
 			return RemoveHandle();
 		case SC_Print:
 			return PrintHandle();
+		case SC_SocketTCP:
+			return SocketTCPHandle();
+		case SC_Connect:
+			return ConnectHandle();
+		case SC_Send:
+			return SendHandle();
+		case SC_Receive:
+			return ReceiveHandle();
+		case SC_SocketClose:
+			return SocketCloseHandle();
 
 		default:
 			cerr

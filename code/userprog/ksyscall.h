@@ -90,4 +90,26 @@ int SysRemove(char* fileName){
   return -1;
 }
 
+int SysSocketTCP()
+{
+  return kernel->fileSystem->SocketTCP();
+}
+
+int SysConnect(int socketid, char *ip, int port)
+{
+  return kernel->fileSystem->SocketConnect(socketid, ip, port);
+}
+
+int SysSend(int socketid, char *buffer, int len){
+    return kernel->fileSystem->SocketSend(socketid, buffer, len);
+}
+
+int SysReceive(int socketid, char *buffer, int len){
+    return kernel->fileSystem->SocketReceive(socketid, buffer, len);
+}
+
+int SysSocketClose(int socketid){
+  return kernel->fileSystem->SocketClose(socketid);
+}
+
 #endif /* ! __USERPROG_KSYSCALL_H__ */
