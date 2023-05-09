@@ -322,6 +322,10 @@ public:
 	}
 
 	bool Remove(char *name) { return Unlink(name) == 0; }
+
+	void Renew(int id) {
+        fileTable->Remove(id);
+    }
 };
 
 #else // FILESYS

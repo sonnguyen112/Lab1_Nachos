@@ -247,8 +247,95 @@ void ReceiveHandle()
 	return moveProgramCounter();
 }
 
-void SocketCloseHandle(){
+void SocketCloseHandle()
+{
 	kernel->machine->WriteRegister(2, SysSocketClose(kernel->machine->ReadRegister(4)));
+	return moveProgramCounter();
+}
+
+void SCExecHandle()
+{
+	int virtAddr;
+	virtAddr = kernel->machine->ReadRegister(4); // doc dia chi ten chuong trinh tu thanh ghi r4
+	char *name;
+	name = User2System(virtAddr); // Lay ten chuong trinh, nap vao kernel
+	if (name == NULL)
+	{
+		DEBUG(dbgSys, "\n Not enough memory in System");
+		ASSERT(false);
+		kernel->machine->WriteRegister(2, -1);
+		return moveProgramCounter();
+	}
+	kernel->machine->WriteRegister(2, SysExec(name));
+	// DO NOT DELETE NAME, THE THEARD WILL DELETE IT LATER
+	// delete[] name;
+
+	return moveProgramCounter();
+}
+
+void SCJoinHandle()
+{
+	int id = kernel->machine->ReadRegister(4);
+	kernel->machine->WriteRegister(2, SysJoin(id));
+	return moveProgramCounter();
+}
+
+void SCExitHandle()
+{
+	int id = kernel->machine->ReadRegister(4);
+	kernel->machine->WriteRegister(2, SysExit(id));
+	return moveProgramCounter();
+}
+
+void SCCreateSemaphoreHandle()
+{
+	int virtAddr = kernel->machine->ReadRegister(4);
+	int semval = kernel->machine->ReadRegister(5);
+
+	char *name = User2System(virtAddr);
+	if (name == NULL)
+	{
+		DEBUG(dbgSys, "\n Not enough memory in System");
+		ASSERT(false);
+		kernel->machine->WriteRegister(2, -1);
+		return moveProgramCounter();
+	}
+
+	kernel->machine->WriteRegister(2, SysCreateSemaphore(name, semval));
+	return moveProgramCounter();
+}
+
+void SCUpHandle()
+{
+	int virtAddr = kernel->machine->ReadRegister(4);
+
+	char *name = User2System(virtAddr);
+	if (name == NULL)
+	{
+		DEBUG(dbgSys, "\n Not enough memory in System");
+		ASSERT(false);
+		kernel->machine->WriteRegister(2, -1);
+		return moveProgramCounter();
+	}
+
+	kernel->machine->WriteRegister(2, SysUp(name));
+	return moveProgramCounter();
+}
+
+void SCDownHandle()
+{
+	int virtAddr = kernel->machine->ReadRegister(4);
+
+	char *name = User2System(virtAddr);
+	if (name == NULL)
+	{
+		DEBUG(dbgSys, "\n Not enough memory in System");
+		ASSERT(false);
+		kernel->machine->WriteRegister(2, -1);
+		return moveProgramCounter();
+	}
+
+	kernel->machine->WriteRegister(2, SysDown(name));
 	return moveProgramCounter();
 }
 
@@ -257,11 +344,22 @@ void ExceptionHandler(ExceptionType which)
 	int type = kernel->machine->ReadRegister(2);
 
 	DEBUG(dbgSys, "Received Exception " << which << " type: " << type << "\n");
-
 	switch (which)
 	{
+	case NoException: // return control to kernel
+		kernel->interrupt->setStatus(SystemMode);
+		DEBUG(dbgSys, "Switch to system mode\n");
+		break;
+	case PageFaultException:
+	case ReadOnlyException:
+	case BusErrorException:
+	case AddressErrorException:
+	case OverflowException:
+	case IllegalInstrException:
+	case NumExceptionTypes:
 	case SyscallException:
 		switch (type)
+
 		{
 		case SC_Halt:
 			DEBUG(dbgSys, "Shutdown, initiated by user program.\n");
@@ -315,7 +413,18 @@ void ExceptionHandler(ExceptionType which)
 			return ReceiveHandle();
 		case SC_SocketClose:
 			return SocketCloseHandle();
-
+		case SC_Exec:
+			return SCExecHandle();
+		case SC_Join:
+			return SCJoinHandle();
+		case SC_Exit:
+			return SCExitHandle();
+		case SC_CreateSemaphore:
+			return SCCreateSemaphoreHandle();
+		case SC_Up:
+			return SCUpHandle();
+		case SC_Down:
+			return SCDownHandle();
 		default:
 			cerr
 				<< "Unexpected system call "

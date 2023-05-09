@@ -14,6 +14,6 @@ main()
   
   result = Add(42, 23);
 
-  Halt();
+  // Halt();
   /* not reached */
 }

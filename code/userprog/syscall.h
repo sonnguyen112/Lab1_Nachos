@@ -40,6 +40,9 @@
 #define SC_Send     19
 #define SC_Receive  20
 #define SC_SocketClose 21
+#define SC_CreateSemaphore 22
+#define SC_Up 23
+#define SC_Down 24
 
 #define SC_Add		42
 
@@ -152,6 +155,12 @@ int Seek(int position, OpenFileId id);
 int Close(OpenFileId id);
 
 void Print(char* buffer);
+
+int CreateSemaphore(char *name, int semval);
+
+int Down(char *name);
+
+int Up(char *name);
 
 
 /* User-level thread operations: Fork and Yield.  To allow multiple

@@ -8,11 +8,13 @@ int main(){
     int srcFileID;
     int destFIleID;
     char srcFileContent[MAX_CONTENT_LEN];
-    Print("Input src file's name: ");
+    Down("sm");
+    Print("Input src file's name for copy: ");
     Read(srcFileName, MAX_NAME_LEN, 0);
-    Print("Input dest file's name: ");
+    Print("Input dest file's name for copy: ");
     Read(destFileName, MAX_NAME_LEN, 0);
     srcFileID = Open(srcFileName, 1);
+    Up("sm");
     if (srcFileID != -1){
         if (Create(destFileName) != -1){
             destFIleID = Open(destFileName, 0);

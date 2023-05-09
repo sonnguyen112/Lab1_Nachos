@@ -62,29 +62,37 @@ int SysOpen(char *fileName, int type)
 
 int SysClose(int id) { return kernel->fileSystem->Close(id); }
 
-int SysRead(char* buffer, int charCount, int fileId) {
-    return kernel->fileSystem->Read(buffer, charCount, fileId);
+int SysRead(char *buffer, int charCount, int fileId)
+{
+  return kernel->fileSystem->Read(buffer, charCount, fileId);
 }
 
-int SysWrite(char* buffer, int charCount, int fileId) {
-    if (fileId == 1) {
-        return kernel->synchConsoleOut->PutString(buffer, charCount);
-    }
-    return kernel->fileSystem->Write(buffer, charCount, fileId);
+int SysWrite(char *buffer, int charCount, int fileId)
+{
+  if (fileId == 1)
+  {
+    return kernel->synchConsoleOut->PutString(buffer, charCount);
+  }
+  return kernel->fileSystem->Write(buffer, charCount, fileId);
 }
 
-int SysSeek(int seekPos, int fileId) {
-    if (fileId <= 1) {
-        DEBUG(dbgSys, "\nCan't seek in console");
-        return -1;
-    }
-    return kernel->fileSystem->Seek(seekPos, fileId);
+int SysSeek(int seekPos, int fileId)
+{
+  if (fileId <= 1)
+  {
+    DEBUG(dbgSys, "\nCan't seek in console");
+    return -1;
+  }
+  return kernel->fileSystem->Seek(seekPos, fileId);
 }
 
-int SysRemove(char* fileName){
+int SysRemove(char *fileName)
+{
   int fileID = SysOpen(fileName, 1);
-  if (fileID != -1){
-    if (kernel->fileSystem->Remove(fileName)) return 0;
+  if (fileID != -1)
+  {
+    if (kernel->fileSystem->Remove(fileName))
+      return 0;
     return -1;
   }
   return -1;
@@ -100,16 +108,72 @@ int SysConnect(int socketid, char *ip, int port)
   return kernel->fileSystem->SocketConnect(socketid, ip, port);
 }
 
-int SysSend(int socketid, char *buffer, int len){
-    return kernel->fileSystem->SocketSend(socketid, buffer, len);
+int SysSend(int socketid, char *buffer, int len)
+{
+  return kernel->fileSystem->SocketSend(socketid, buffer, len);
 }
 
-int SysReceive(int socketid, char *buffer, int len){
-    return kernel->fileSystem->SocketReceive(socketid, buffer, len);
+int SysReceive(int socketid, char *buffer, int len)
+{
+  return kernel->fileSystem->SocketReceive(socketid, buffer, len);
 }
 
-int SysSocketClose(int socketid){
+int SysSocketClose(int socketid)
+{
   return kernel->fileSystem->SocketClose(socketid);
+}
+
+int SysExec(char *name)
+{
+  // cerr << "call: `" << name  << "`"<< endl;
+  OpenFile *oFile = kernel->fileSystem->Open(name);
+  if (oFile == NULL)
+  {
+    DEBUG(dbgSys, "\nExec:: Can't open this file.");
+    return -1;
+  }
+  
+  delete oFile;
+
+  // Return child process id
+  return kernel->pTab->ExecUpdate(name);
+}
+
+int SysJoin(int id) { return kernel->pTab->JoinUpdate(id); }
+
+int SysExit(int id) { return kernel->pTab->ExitUpdate(id); }
+
+int SysCreateSemaphore(char* name, int initialValue) {
+    int res = kernel->semTab->Create(name, initialValue);
+
+    if (res == -1) {
+        DEBUG('a', "\nError creating semaphore");
+        return -1;
+    }
+
+    return 0;
+}
+
+int SysDown(char* name) {
+    int res = kernel->semTab->Wait(name);
+
+    if (res == -1) {
+        DEBUG('a', "\nSemaphore not found");
+        return -1;
+    }
+
+    return 0;
+}
+
+int SysUp(char* name) {
+    int res = kernel->semTab->Signal(name);
+
+    if (res == -1) {
+        DEBUG('a', "\nSemaphore not found");
+        return -1;
+    }
+
+    return 0;
 }
 
 #endif /* ! __USERPROG_KSYSCALL_H__ */

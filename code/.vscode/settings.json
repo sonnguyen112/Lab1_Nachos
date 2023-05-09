@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "new": "cpp",
+        "syscall.h": "c",
+        "*.tcc": "c",
+        "ostream": "c",
+        "sstream": "c"
+    }
+}
